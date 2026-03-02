@@ -1,0 +1,118 @@
+<!DOCTYPE html><html>
+<head><title>Pac-Man</title>
+<style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:monospace;color:#ff0}
+#msg{font-size:20px;margin:8px;letter-spacing:2px}</style>
+</head><body>
+<div id="msg">PRESS ENTER TO START</div><canvas id="c"></canvas>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),S=32,N=15;
+C.width=C.height=N*S;
+
+const MAP=[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,0,1,1,0,1,1,1,1,1,0,1,1,0,1],
+[1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+[1,0,0,0,1,0,1,2,1,0,1,0,0,0,1],
+[1,0,1,0,1,0,0,0,0,0,1,0,1,0,1],
+[1,0,1,0,0,0,1,2,1,0,0,0,1,0,1],
+[1,0,0,0,1,0,0,2,0,0,1,0,0,0,1],
+[1,0,1,0,0,0,1,2,1,0,0,0,1,0,1],
+[1,0,1,0,1,0,0,0,0,0,1,0,1,0,1],
+[1,0,0,0,1,0,1,2,1,0,1,0,0,0,1],
+[1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+[1,0,1,1,0,1,1,1,1,1,0,1,1,0,1],
+[1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+let grid,pac,ghosts,score,state='wait',tick=0,ndx=0,ndy=0,pt=0,gt=0,last=0,rafId;
+
+function wall(x,y){return x<0||y<0||x>=N||y>=N||grid[y][x]===1;}
+
+function init(){
+  grid=MAP.map(r=>[...r]);
+  pac={x:7,y:13,dx:0,dy:0};
+  ghosts=[{x:1,y:1,dx:1,dy:0,c:'#f55'},{x:13,y:1,dx:-1,dy:0,c:'#f5f'}];
+  score=0;state='play';ndx=ndy=pt=gt=tick=0;
+  document.getElementById('msg').textContent='Score: 0';
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&state!=='play'){
+    cancelAnimationFrame(rafId);init();last=performance.now();rafId=requestAnimationFrame(loop);
+  }
+  const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+  if(d[e.key]){[ndx,ndy]=d[e.key];e.preventDefault();}
+});
+
+function loop(ts){
+  const dt=Math.min(ts-last,100);last=ts;pt+=dt;gt+=dt;tick++;
+
+  if(pt>=200){pt=0;
+    if(!wall(pac.x+ndx,pac.y+ndy)){pac.dx=ndx;pac.dy=ndy;}
+    const nx=pac.x+pac.dx,ny=pac.y+pac.dy;
+    if(!wall(nx,ny)){pac.x=nx;pac.y=ny;
+      if(grid[ny][nx]===0){grid[ny][nx]=2;score++;
+        document.getElementById('msg').textContent='Score: '+score;}
+    }
+  }
+
+  if(gt>=270){gt=0;
+    for(const g of ghosts){
+      const ds=[[1,0],[-1,0],[0,1],[0,-1]];
+      if(!wall(g.x+g.dx,g.y+g.dy)&&Math.random()>.25){g.x+=g.dx;g.y+=g.dy;}
+      else{
+        const v=ds.filter(([a,b])=>!wall(g.x+a,g.y+b));
+        if(v.length){[g.dx,g.dy]=v[~~(Math.random()*v.length)];g.x+=g.dx;g.y+=g.dy;}
+      }
+    }
+  }
+
+  for(const g of ghosts)if(g.x===pac.x&&g.y===pac.y){
+    state='over';
+    document.getElementById('msg').textContent='GAME OVER! Score: '+score+' | ENTER to restart';
+    return draw();
+  }
+  draw();rafId=requestAnimationFrame(loop);
+}
+
+function drawGhost(g){
+  const gx=g.x*S,gy=g.y*S,r=S/2-2;
+  X.fillStyle=g.c;X.beginPath();
+  X.arc(gx+S/2,gy+r+2,r,Math.PI,0);
+  X.lineTo(gx+S-2,gy+S-2);
+  X.quadraticCurveTo(gx+S*.75,gy+S-9,gx+S/2,gy+S-2);
+  X.quadraticCurveTo(gx+S*.25,gy+S-9,gx+2,gy+S-2);
+  X.closePath();X.fill();
+  X.fillStyle='#fff';
+  X.beginPath();X.arc(gx+S*.35,gy+r,3.5,0,7);X.fill();
+  X.beginPath();X.arc(gx+S*.65,gy+r,3.5,0,7);X.fill();
+  X.fillStyle='#00a';
+  X.beginPath();X.arc(gx+S*.35+1,gy+r,2,0,7);X.fill();
+  X.beginPath();X.arc(gx+S*.65+1,gy+r,2,0,7);X.fill();
+}
+
+function draw(){
+  X.fillStyle='#000';X.fillRect(0,0,C.width,C.height);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(grid[y][x]===1){X.fillStyle='#00f';X.fillRect(x*S,y*S,S,S);}
+    else if(grid[y][x]===0){
+      X.fillStyle='#aaf';X.beginPath();
+      X.arc(x*S+S/2,y*S+S/2,3,0,7);X.fill();
+    }
+  }
+  const a=Math.atan2(pac.dy,pac.dx),m=.25+.2*Math.abs(Math.sin(tick*.35));
+  X.fillStyle='#ff0';X.beginPath();
+  X.moveTo(pac.x*S+S/2,pac.y*S+S/2);
+  X.arc(pac.x*S+S/2,pac.y*S+S/2,S/2-2,a+m*Math.PI,a+(2-m)*Math.PI);
+  X.closePath();X.fill();
+  ghosts.forEach(drawGhost);
+}
+
+// Draw initial preview
+grid=MAP.map(r=>[...r]);
+pac={x:7,y:13,dx:1,dy:0};
+ghosts=[{x:1,y:1,dx:1,dy:0,c:'#f55'},{x:13,y:1,dx:-1,dy:0,c:'#f5f'}];
+draw();
+</script></body></html>
