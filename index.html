@@ -54,7 +54,13 @@ function loop(ts){
     const nx=pac.x+pac.dx,ny=pac.y+pac.dy;
     if(!wall(nx,ny)){pac.x=nx;pac.y=ny;
       if(grid[ny][nx]===0){grid[ny][nx]=2;score++;
-        document.getElementById('msg').textContent='Score: '+score;}
+        document.getElementById('msg').textContent='Score: '+score;
+        if(!grid.some(r=>r.includes(0))){
+          state='win';
+          document.getElementById('msg').textContent='YOU WIN! Score: '+score+' | ENTER to restart';
+          return draw();
+        }
+      }
     }
   }
 
